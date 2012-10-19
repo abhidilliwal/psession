@@ -1,4 +1,7 @@
 <?php
+
+require_once 'PersistentSessionExceptions.php';
+
 /**
  * Persistent Session as name suggest creates a session which can persist longer ('remember me')
  *
@@ -19,7 +22,6 @@ CREATE TABLE IF NOT EXISTS `psession` (
  * @author Abhishek Dilliwal (dilliwal.com)
  *
  */
-
 class PersistentSession {
 	
 	const COOKIE_NAME = "PS";
