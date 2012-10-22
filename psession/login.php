@@ -1,14 +1,14 @@
 <?php
 
+	require_once 'PersistentSessionExceptions.php';
 	require_once 'PersistentSession.php';
+	require_once 'PersistentSessionModel.php';
+	require_once 'PersistentSessionManager.php';
 
-	$db = new PDO('mysql:dbname=psession;host=127.0.0.1', 'psession', 'psession');
+	$pdo = new PDO('mysql:dbname=psession;host=127.0.0.1', 'psession', 'psession');
 
-	$session = new PersistentSession($db);
+	$session = new PersistentSessionManager($pdo);
 	
-	$session->startSession();
-	
-	print_r($session);
 	if (isset($_POST['username']) && strlen(trim($_POST['username']))) {
 		$username = trim($_POST['username']);
 		$remember = isset($_POST['remember_me']) ? true : false;
