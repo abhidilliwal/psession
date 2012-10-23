@@ -27,7 +27,6 @@ class PersistentSessionModel {
 
 		/* Bind by column name */
 		$stmt->bindColumn('id', $id, PDO::PARAM_INT);
-		$stmt->bindColumn('key', $key, PDO::PARAM_STR);
 		$stmt->bindColumn('ua', $ua, PDO::PARAM_STR);
 		$stmt->bindColumn('timeout', $timeout, PDO::PARAM_INT);
 		$stmt->bindColumn('data', $data, PDO::PARAM_STR);
@@ -37,7 +36,8 @@ class PersistentSessionModel {
 		if($stmt->fetch(PDO::FETCH_BOUND)){
 			$psession = new PersistentSession();
 			$psession->id = $id;
-			$psession->key = $key;
+			// remeber that we are not reading the key stored in database as it is encrypted
+			$psession->clientKey = $clientKey;
 			$psession->ua = $ua;
 			$psession->timeout = $timeout;
 			$psession->data = strlen($data) ? json_decode($data) : null;
@@ -109,7 +109,7 @@ class PersistentSessionModel {
 	 * Delete all expired sessions
 	 * Caution: this should not be done tht often!
 	 */
-	public function gc () {
+	static function gc () {
 		$sql = 'delete FROM `' . PersistentSessionModel::TABLE_NAME . '` where `timeout` < :currentTime';
 		$stmt = $this->db->prepare($sql);
 		$stmt->bindParam(':currentTime', time(), PDO::PARAM_INT);
@@ -125,19 +125,23 @@ class PersistentSessionModel {
 	public function addSession ($psession) {
 		$clientKey = $psession->getClientKey();
 		$timeout = $psession->timeout;
-		if (!isset($psession->username) || empty($clientKey) || empty($timeout)) {
+		$data = isset($psession->data) ? json_encode($psession->data) : '';
+		if (!isset($psession->username) || empty($clientKey) || !isset($timeout)) {
 			throw new NotValidSessionException('Username, timeout and clientKey should be provided');
 		}
 
 		$sql = 'insert into `' . PersistentSessionModel::TABLE_NAME . '` (`key`, `ua`, `timeout`, `data`, `username`, `starttime`)
 		values(:key, :ua, :timeout, :data, :username, :starttime)';
-		$stmt = $psession->db->prepare($sql);
+		$stmt = $this->db->prepare($sql);
+		// we would be storing the hash of the client key and not the actual user client key
 		$stmt->bindParam(':key', sha1($clientKey), PDO::PARAM_STR);
-		$stmt->bindParam(':ua', $_SERVER['HTTP_USER_AGENT'], PDO::PARAM_STR);
+		$stmt->bindParam(':ua', $psession->ua, PDO::PARAM_STR);
 		$stmt->bindParam(':timeout', $timeout, PDO::PARAM_INT);
-		$stmt->bindParam(':data', isset($psession->data) ? json_encode($psession->data) : '', PDO::PARAM_STR);
+		// we will be storing the user data in JSON format, see its becoming so popular :D
+		// well the reason is we are not using php serialize so that the DB can be utilized by some other app as well.
+		$stmt->bindParam(':data', $data, PDO::PARAM_STR);
 		$stmt->bindParam(':username', trim($psession->username), PDO::PARAM_STR);
-		$stmt->bindParam(':starttime', trim(), PDO::PARAM_INT);
+		$stmt->bindParam(':starttime', $psession->starttime, PDO::PARAM_INT);
 		$stmt->execute();
 	}
 

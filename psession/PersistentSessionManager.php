@@ -3,7 +3,11 @@
 class PersistentSessionManager {
 
 	const COOKIE_NAME = "PS";
+	const COOKIE_SECURE = false; // for https make it true
+	const COOKIE_PATH = ""; // current path by default
+	const COOKIE_DOMAIN = ""; // default is the current domain
 	const TIMEOUT = 2592000; // 30 days: 30 * 24 * 60 * 60
+	const TIMEOUT_SESSION = 10800; // 3 hrs: 3 * 60 * 60
 
 	/**
 	 *
@@ -43,30 +47,62 @@ class PersistentSessionManager {
 	 * This is done just once!
 	 */
 	public function init () {
-
+		
+		// ensure that init has not been called already
 		if ($this->sessionStarted === false) {
-
-			$clientKey = $this->readClientCookie();
-
-			if (!empty($clientKey)) {
-				$this->session = $this->model->getSession($clientKey);
-				$this->setSessionStarted();
-			}
-				
-		}
 			
+			$clientKey = $this->readClientCookie();
+			if (!empty($clientKey)) {
+				try{
+					$this->session = $this->model->getSession($clientKey);
+				} catch (NotValidSessionException $nvs) {
+					// nothing to do, there was no session!
+				}
+			}
+			
+			$this->setSessionStarted();
+		}
 	}
 
+	/**
+	 * Flag to check if the init has been called?
+	 */
 	private function setSessionStarted () {
 		$this->sessionStarted = true;
 	}
 
+	/**
+	 * Know if the session is set or not.
+	 * @return boolean
+	 * A false means that no session was set or the session does not exist
+	 * a true means you can access the session via PersistentSessionManager::getSession()
+	 * @throws PersistentSessionException
+	 */
 	public function isActiveSession() {
+		if ($this->sessionStarted === false) {
+			// we should ensure that init has been called.
+			throw new PersistentSessionException("Please call the init before invoking isActiveSession");
+		}
 		return isset($this->session);
 	}
 
+	/**
+	 * Get the current session set.
+	 * To query if the session is set use {@link PersistentSessionManager::isActiveSession()}
+	 * 
+	 * @return PersistentSession
+	 * default persistent session bean
+	 */
 	public function getSession() {
 		return $this->session;
+	}
+	
+	public function getSessionUsername() {
+		return $this->session->username;
+	}
+	
+	public function getSessionData() {
+		return $this->session->data;
 	}
 
 	/**
@@ -78,16 +114,37 @@ class PersistentSessionManager {
 	 * for example: data = array('group' => 'admin', 'fname' => 'Abhishek', 'age' => 25)
 	 * @param boolean $remeber
 	 * should the session persist even when the user closes the browser.
+	 * @throws PersistentSessionException
+	 * @throws PDOException
 	 */
-	public function startSession($username, $data = null, $remeber = false) {
-		if (!$this->isActiveSession()) {
+	public function startSession($username, $data = null, $remember = false) {
+		if ($this->sessionStarted === false) {
+			// we should ensure that init has been called.
+			throw new PersistentSessionException("Please call the init before invoking startSession");
+		}else if (!$this->isActiveSession()) {
+			// there was no active session lets create a new session
 			$session = new PersistentSession();
+			
+			// set all the variables
 			$session->username = $username;
 			$session->data = $data;
-			$session->clientKey = $this->generateKey();
-			$this->writeClientCookie();
+			$session->clientKey = $this->generateKey($session);
+			$session->ua = $_SERVER['HTTP_USER_AGENT'];
+			$session->starttime = time();
+			if ($remember === false) {
+				// we need to make a session cookie
+				$session->timeout = time() + PersistentSessionManager::TIMEOUT_SESSION;
+			} else {
+				// we need to make a persistent cookie
+				$session->timeout = time() + PersistentSessionManager::TIMEOUT;
+			}
+			// add to database
 			$this->model->addSession($session);
-
+			
+			// added to database now its time for cookie!
+			$this->writeClientCookie($session->clientKey, $remember === false ? 0 : $session->timeout);
+			
+			$this->session = $session;
 		}
 	}
 
@@ -95,29 +152,38 @@ class PersistentSessionManager {
 	 * logout; end the session of the user
 	 */
 	public function endSession () {
-		if ($this->readClientCookie()){
-			// lookup the cookie in database
+		if ($this->sessionStarted === false) {
+			// we should ensure that init has been called.
+			throw new PersistentSessionException("Please call the init before invoking startSession");
+		}else if ($this->isActiveSession()) {
 
-			$this->readSession();
+			// there is a active session available
+			// delete the session from database
+			$this->model->deleteSession($this->session);
 
+			// deleted from database now its time for cookie!
+			$this->writeClientCookie($this->session->clientKey, (time() - 3600));
+			
+			// and unset the object itself
+			$this->session = null;
+			
 		}
 	}
 
 	public function setData($data) {
-		$this->data = json_encode($data);
+		$this->data = $data;
 	}
 
 	public function getData() {
-		return json_decode($this->data);
+		return $this->data;
 	}
 
-
-	public function saveSession () {
-		// save the session changed information
-	}
-
-	protected function generateKey() {
-		return sha1($this->username + $_SERVER['REMOTE_ADDR'] + time() + rand(100000, 1000000));
+	/**
+	 * 
+	 * @param PersistentSession $session
+	 */
+	protected function generateKey($session) {
+		return sha1($session->username + $_SERVER['REMOTE_ADDR'] + time() + rand(100000, 1000000));
 	}
 
 	/**
@@ -128,8 +194,14 @@ class PersistentSessionManager {
 		return $clientKey;
 	}
 
-	protected function writeClientCookie() {
-
+	/**
+	 * 
+	 * @param PersistentSession $psession
+	 */
+	protected function writeClientCookie($key, $timeout) {
+		// we want this to be transferred via HTTP only (the last true)
+		setcookie(PersistentSessionManager::COOKIE_NAME, $key, $timeout, PersistentSessionManager::COOKIE_PATH, 
+					PersistentSessionManager::COOKIE_DOMAIN, PersistentSessionManager::COOKIE_SECURE, true);
 	}
 
 }
