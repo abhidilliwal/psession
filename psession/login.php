@@ -37,7 +37,7 @@
 			$remember = isset($_POST['remember_me']) ? true : false;
 			
 			// say you validated everything and now you want to start the session...
-			$session->startSession($username, array('name'=>'Abhishek Dilliwal', 'age' => 25), $remember);
+			$session->startSession($username, array('data'=>$_POST['meta'], 'age' => $_POST['age']), $remember);
 			
 			// from now on session has started, though you can use $session->isActiveSession() am redirecting just for setting the cookie.
 			header('Location: login.php');
@@ -57,7 +57,13 @@
 </head>
 <body>
 	<form action="login.php" method="post">
-		username: <input type="text" name="username" /> <br /> <label><input
+		username: <input type="text" name="username" /> <br /> 
+		<div style="background-color: #DDD; padding: 3px;">
+		<p>Add some data to persist: </p>
+		some data: <input type="text" name="meta" /> 
+		age: <input type="text" name="age" /> <br />
+		</div> 
+		<label><input
 			type="checkbox" name="remember_me" /> Remember me (for 30 days!)</label><br /> <input
 			type="submit" value="submit" />
 	</form>
