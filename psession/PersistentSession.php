@@ -1,5 +1,6 @@
 <?php
 
+namespace abhidilliwal\psession;
 
 /**
  * Persistent Session as name suggest creates a session which can persist longer ('remember me')

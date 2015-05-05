@@ -1,5 +1,7 @@
 <?php
 
+namespace abhidilliwal\psession;
+
 class PersistentSessionManager {
 
 	const COOKIE_NAME = "PS";
@@ -47,10 +49,10 @@ class PersistentSessionManager {
 	 * This is done just once!
 	 */
 	public function init () {
-		
+
 		// ensure that init has not been called already
 		if ($this->sessionStarted === false) {
-			
+
 			$clientKey = $this->readClientCookie();
 			if (!empty($clientKey)) {
 				try{
@@ -59,7 +61,7 @@ class PersistentSessionManager {
 					// nothing to do, there was no session!
 				}
 			}
-			
+
 			$this->setSessionStarted();
 		}
 	}
@@ -89,18 +91,18 @@ class PersistentSessionManager {
 	/**
 	 * Get the current session set.
 	 * To query if the session is set use {@link PersistentSessionManager::isActiveSession()}
-	 * 
+	 *
 	 * @return PersistentSession
 	 * default persistent session bean
 	 */
 	public function getSession() {
 		return $this->session;
 	}
-	
+
 	public function getSessionUsername() {
 		return $this->session->username;
 	}
-	
+
 	public function getSessionData() {
 		return $this->session->data;
 	}
@@ -124,7 +126,7 @@ class PersistentSessionManager {
 		}else if (!$this->isActiveSession()) {
 			// there was no active session lets create a new session
 			$session = new PersistentSession();
-			
+
 			// set all the variables
 			$session->username = $username;
 			$session->data = $data;
@@ -140,10 +142,10 @@ class PersistentSessionManager {
 			}
 			// add to database
 			$this->model->addSession($session);
-			
+
 			// added to database now its time for cookie!
 			$this->writeClientCookie($session->clientKey, $remember === false ? 0 : $session->timeout);
-			
+
 			$this->session = $session;
 		}
 	}
@@ -163,10 +165,10 @@ class PersistentSessionManager {
 
 			// deleted from database now its time for cookie!
 			$this->writeClientCookie($this->session->clientKey, (time() - 3600));
-			
+
 			// and unset the object itself
 			$this->session = null;
-			
+
 		}
 	}
 
@@ -179,7 +181,7 @@ class PersistentSessionManager {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param PersistentSession $session
 	 */
 	protected function generateKey($session) {
@@ -195,12 +197,12 @@ class PersistentSessionManager {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param PersistentSession $psession
 	 */
 	protected function writeClientCookie($key, $timeout) {
 		// we want this to be transferred via HTTP only (the last true)
-		setcookie(PersistentSessionManager::COOKIE_NAME, $key, $timeout, PersistentSessionManager::COOKIE_PATH, 
+		setcookie(PersistentSessionManager::COOKIE_NAME, $key, $timeout, PersistentSessionManager::COOKIE_PATH,
 					PersistentSessionManager::COOKIE_DOMAIN, PersistentSessionManager::COOKIE_SECURE, true);
 	}
 

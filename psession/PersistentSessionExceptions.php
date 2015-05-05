@@ -1,5 +1,7 @@
 <?php
 
+namespace abhidilliwal\psession;
+
 class PersistentSessionException extends Exception{
 
 	function __construct($message = null, $code = null) {

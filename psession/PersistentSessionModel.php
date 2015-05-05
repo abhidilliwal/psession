@@ -1,5 +1,7 @@
 <?php
 
+namespace abhidilliwal\psession;
+
 class PersistentSessionModel {
 
 	const TABLE_NAME = "psession";
@@ -52,7 +54,7 @@ class PersistentSessionModel {
 			throw new NotValidSessionException();
 		}
 	}
-	
+
 	public function getAllUserSession($username = null) {
 
 		$currentTime = time();
@@ -93,19 +95,19 @@ class PersistentSessionModel {
 		$stmt->bindParam(':username', $username, PDO::PARAM_STR);
 		$stmt->execute();
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param String $username
 	 * @throws NotValidSessionException
 	 * @throws PDOException
 	 */
 	public function deleteAllSessions ($username) {
-	
+
 		if (!(isset($username))) {
 			throw new NotValidSessionException('Username should be provided');
 		}
-	
+
 		$sql = 'delete FROM `' . PersistentSessionModel::TABLE_NAME . '` where `username` = :username';
 		$stmt = $this->db->prepare($sql);
 		$stmt->bindParam(':username', $username, PDO::PARAM_STR);
