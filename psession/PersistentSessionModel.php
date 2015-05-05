@@ -2,6 +2,8 @@
 
 namespace abhidilliwal\psession;
 
+use \PDO;
+
 class PersistentSessionModel {
 
 	const TABLE_NAME = "psession";

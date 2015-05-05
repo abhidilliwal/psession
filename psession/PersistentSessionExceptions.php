@@ -2,7 +2,9 @@
 
 namespace abhidilliwal\psession;
 
-class PersistentSessionException extends \Exception{
+use \Exception;
+
+class PersistentSessionException extends Exception{
 
 	function __construct($message = null, $code = null) {
 		parent::__construct($message, $code);

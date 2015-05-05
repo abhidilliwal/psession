@@ -2,6 +2,8 @@
 
 namespace abhidilliwal\psession;
 
+use \PDO;
+
 class PersistentSessionManager {
 
 	const COOKIE_NAME = "PS";

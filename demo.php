@@ -1,6 +1,5 @@
 <?php
 
-    use abhidilliwal\psession;
 
     // These are required files in order.
     require_once 'psession/PersistentSessionExceptions.php';
@@ -8,11 +7,13 @@
     require_once 'psession/PersistentSessionModel.php';
     require_once 'psession/PersistentSessionManager.php';
 
+    use abhidilliwal\psession\PersistentSessionManager;
+
     // setting file for demo
     include_once 'demo_setting.php';
 
     // you can do this in your own way what just session manager needs is PDO object
-    $pdo = new PDO($demo_setting['db_dsn'], $demo_setting['db_username'], $demo_setting['db_password']);
+    $pdo = new \PDO($demo_setting['db_dsn'], $demo_setting['db_username'], $demo_setting['db_password']);
 
     // this line should be the initial line of your code. Just like session_start of PHP
     // if you want to initialize the session at later stage pass a second argument as false in constructor, see the source for details
