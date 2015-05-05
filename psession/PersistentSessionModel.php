@@ -16,13 +16,17 @@ class PersistentSessionModel {
 	 * @throws NotValidSessionException
 	 */
 	public  function getSession ($clientKey) {
+
+		$sha1ClientKey = sha1($clientKey);
+		$currentTime = time();
+
 		if (empty($clientKey)) {
 			throw new NotValidSessionException('Client Key not set');
 		}
 		$sql = 'SELECT * FROM `' . PersistentSessionModel::TABLE_NAME . '` where `key` = :clientKey and `timeout` > :currentTime limit 1';
 		$stmt = $this->db->prepare($sql);
-		$stmt->bindParam(':clientKey', sha1($clientKey), PDO::PARAM_STR);
-		$stmt->bindParam(':currentTime', time(), PDO::PARAM_INT);
+		$stmt->bindParam(':clientKey', $sha1ClientKey, PDO::PARAM_STR);
+		$stmt->bindParam(':currentTime', $currentTime, PDO::PARAM_INT);
 		$stmt->execute();
 
 		/* Bind by column name */
@@ -50,13 +54,16 @@ class PersistentSessionModel {
 	}
 	
 	public function getAllUserSession($username = null) {
+
+		$currentTime = time();
+
 		if (empty($username)) {
 			throw new NotValidSessionException('Username not provided');
 		}
 		$sql = 'SELECT * FROM `' . PersistentSessionModel::TABLE_NAME . '` where `username` = :username and `timeout` > :currentTime limit 1';
 		$stmt = $this->db->prepare($sql);
-		$stmt->bindParam(':username', sha1($clientKey), PDO::PARAM_STR);
-		$stmt->bindParam(':currentTime', time(), PDO::PARAM_INT);
+		$stmt->bindParam(':username', $username, PDO::PARAM_STR);
+		$stmt->bindParam(':currentTime', $currentTime, PDO::PARAM_INT);
 		$stmt->execute();
 
 		if($stmt->fetch(PDO::FETCH_BOUND)){
@@ -73,7 +80,7 @@ class PersistentSessionModel {
 	 * @throws PDOException
 	 */
 	public function deleteSession ($psession) {
-		$clientKey = $psession->getClientKey();
+		$clientKey = sha1($psession->getClientKey());
 		$username = $psession->username;
 
 		if (!(isset($clientKey) && isset($username))) {
@@ -82,7 +89,7 @@ class PersistentSessionModel {
 
 		$sql = 'delete FROM `' . PersistentSessionModel::TABLE_NAME . '` where `key` = :clientKey and `username` = :username limit 1';
 		$stmt = $this->db->prepare($sql);
-		$stmt->bindParam(':clientKey', sha1($clientKey), PDO::PARAM_STR);
+		$stmt->bindParam(':clientKey', $clientKey, PDO::PARAM_STR);
 		$stmt->bindParam(':username', $username, PDO::PARAM_STR);
 		$stmt->execute();
 	}
@@ -110,9 +117,12 @@ class PersistentSessionModel {
 	 * Caution: this should not be done tht often!
 	 */
 	static function gc () {
+
+		$currentTime = time();
+
 		$sql = 'delete FROM `' . PersistentSessionModel::TABLE_NAME . '` where `timeout` < :currentTime';
 		$stmt = $this->db->prepare($sql);
-		$stmt->bindParam(':currentTime', time(), PDO::PARAM_INT);
+		$stmt->bindParam(':currentTime', $currentTime, PDO::PARAM_INT);
 		$stmt->execute();
 	}
 
@@ -123,9 +133,13 @@ class PersistentSessionModel {
 	 * @throws PDOException
 	 */
 	public function addSession ($psession) {
-		$clientKey = $psession->getClientKey();
+
+
+		$clientKey = sha1($psession->getClientKey());
 		$timeout = $psession->timeout;
 		$data = isset($psession->data) ? json_encode($psession->data) : '';
+		$username = trim($psession->username);
+
 		if (!isset($psession->username) || empty($clientKey) || !isset($timeout)) {
 			throw new NotValidSessionException('Username, timeout and clientKey should be provided');
 		}
@@ -134,13 +148,13 @@ class PersistentSessionModel {
 		values(:key, :ua, :timeout, :data, :username, :starttime)';
 		$stmt = $this->db->prepare($sql);
 		// we would be storing the hash of the client key and not the actual user client key
-		$stmt->bindParam(':key', sha1($clientKey), PDO::PARAM_STR);
+		$stmt->bindParam(':key', $clientKey, PDO::PARAM_STR);
 		$stmt->bindParam(':ua', $psession->ua, PDO::PARAM_STR);
 		$stmt->bindParam(':timeout', $timeout, PDO::PARAM_INT);
 		// we will be storing the user data in JSON format, see its becoming so popular :D
 		// well the reason is we are not using php serialize so that the DB can be utilized by some other app as well.
 		$stmt->bindParam(':data', $data, PDO::PARAM_STR);
-		$stmt->bindParam(':username', trim($psession->username), PDO::PARAM_STR);
+		$stmt->bindParam(':username', $username, PDO::PARAM_STR);
 		$stmt->bindParam(':starttime', $psession->starttime, PDO::PARAM_INT);
 		$stmt->execute();
 	}
