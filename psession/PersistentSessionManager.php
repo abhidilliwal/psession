@@ -6,12 +6,14 @@ use \PDO;
 
 class PersistentSessionManager {
 
-	const COOKIE_NAME = "PS";
-	const COOKIE_SECURE = false; // for https make it true
-	const COOKIE_PATH = ""; // current path by default
-	const COOKIE_DOMAIN = ""; // default is the current domain
-	const TIMEOUT = 2592000; // 30 days: 30 * 24 * 60 * 60
-	const TIMEOUT_SESSION = 10800; // 3 hrs: 3 * 60 * 60
+	protected $config = array(
+        "name" => "PS",
+        "secure" => false, // for https make it true
+	    "path" => "", // current path by default
+	    "domain" => "", // default is the current domain
+	    "timeout_persistent" => 2592000, // 30 days: 30 * 24 * 60 * 60
+	    "timeout_session" => 10800 // 3 hrs: 3 * 60 * 60
+	);
 
 	/**
 	 *
@@ -37,13 +39,26 @@ class PersistentSessionManager {
 	 * @param boolean $initSession
 	 * Should the session too start on object instantiation
 	 */
-	function __construct(PDO $pdo, $initSession = true) {
+	function __construct(PDO $pdo, $config = null, $initSession = true) {
 		$this->model = new PersistentSessionModel($pdo);
+
+		$this->setConfig($config);
 
 		if ($initSession === true) {
 			// lets initialize the session
 			$this->init();
 		}
+	}
+
+	public function setConfig ($config) {
+	    if (empty($config)) {
+            return;
+	    }
+	    foreach ($config as $configName => $configVal) {
+            if (isset($this->config[$configName])) {
+                $this->configp[$configName] = $configVal;
+            }
+	    }
 	}
 
 	/**
@@ -137,10 +152,10 @@ class PersistentSessionManager {
 			$session->starttime = time();
 			if ($remember === false) {
 				// we need to make a session cookie
-				$session->timeout = time() + PersistentSessionManager::TIMEOUT_SESSION;
+				$session->timeout = time() + $this->config['timeout_session'];
 			} else {
 				// we need to make a persistent cookie
-				$session->timeout = time() + PersistentSessionManager::TIMEOUT;
+				$session->timeout = time() + $this->config['timeout_persistent'];
 			}
 			// add to database
 			$this->model->addSession($session);
@@ -194,7 +209,7 @@ class PersistentSessionManager {
 	 * get the cookie stored in users browser
 	 */
 	protected function readClientCookie() {
-		$clientKey = isset($_COOKIE[PersistentSessionManager::COOKIE_NAME]) ? trim($_COOKIE[PersistentSessionManager::COOKIE_NAME]) : null;
+		$clientKey = isset($_COOKIE[$this->config['name']]) ? trim($_COOKIE[$this->config['name']]) : null;
 		return $clientKey;
 	}
 
@@ -204,8 +219,8 @@ class PersistentSessionManager {
 	 */
 	protected function writeClientCookie($key, $timeout) {
 		// we want this to be transferred via HTTP only (the last true)
-		setcookie(PersistentSessionManager::COOKIE_NAME, $key, $timeout, PersistentSessionManager::COOKIE_PATH,
-					PersistentSessionManager::COOKIE_DOMAIN, PersistentSessionManager::COOKIE_SECURE, true);
+		setcookie($this->config['name'], $key, $timeout, $this->config['path'],
+					$this->config['domain'], $this->config['secure'], true);
 	}
 
 }
