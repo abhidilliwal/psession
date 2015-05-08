@@ -10,9 +10,9 @@ class PersistentSessionManager {
     protected $config = array (
             "name" => "PS",
             "secure" => false, // for https make it true
-            "path" => "", // current path by default
+            "path" => "/", // current path by default
             "domain" => "", // default is the current domain
-            "timeout_persistent" => 2592000, // 30 days: 30 * 24 * 60 * 60
+            "timeout" => 2592000, // 30 days: 30 * 24 * 60 * 60
             "timeout_session" => 10800
     ) // 3 hrs: 3 * 60 * 60
 ;
@@ -157,7 +157,7 @@ class PersistentSessionManager {
                 $session->timeout = time () + $this->config ['timeout_session'];
             } else {
                 // we need to make a persistent cookie
-                $session->timeout = time () + $this->config ['timeout_persistent'];
+                $session->timeout = time () + $this->config ['timeout'];
             }
             // add to database
             $this->model->addSession ( $session );
