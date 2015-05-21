@@ -59,7 +59,7 @@ class PersistentSessionManager {
         }
         foreach ( $config as $configName => $configVal ) {
             if (isset ( $this->config [$configName] )) {
-                $this->configp [$configName] = $configVal;
+                $this->config [$configName] = $configVal;
             }
         }
     }
